@@ -4,7 +4,7 @@
   <img src=".github/brand/logo-green.svg" alt="MacroPulse" width="72" height="72">
 </picture>
 
-<sub>Part of the <a href="https://github.com/GabrielGauss/macropulse-platform">MacroPulse platform</a></sub>
+<sub>Part of the <a href="https://github.com/macropulse-lab/macropulse-platform">MacroPulse platform</a></sub>
 </div>
 
 # irl-verify
@@ -68,13 +68,13 @@ history even with full control of their own database. See
 ## Install
 
 ```
-cargo install --git https://github.com/GabrielGauss/irl-verify
+cargo install --git https://github.com/macropulse-lab/irl-verify
 ```
 
 or build from source:
 
 ```
-git clone https://github.com/GabrielGauss/irl-verify
+git clone https://github.com/macropulse-lab/irl-verify
 cd irl-verify && cargo build --release
 ./target/release/irl-verify --help
 ```
@@ -112,5 +112,5 @@ MIT — verification infrastructure should be free for everyone, forever.
 ---
 
 <div align="center">
-<sub>Part of the <a href="https://github.com/GabrielGauss/macropulse-platform">MacroPulse platform</a> · <a href="https://macropulse.live">macropulse.live</a> · <a href="https://macropulse.live/irl">IRL Engine</a></sub>
+<sub>Part of the <a href="https://github.com/macropulse-lab/macropulse-platform">MacroPulse platform</a> · <a href="https://macropulse.live">macropulse.live</a> · <a href="https://macropulse.live/irl">IRL Engine</a></sub>
 </div>

@@ -2,6 +2,12 @@
 
 **Status: frozen.** Backward-incompatible changes will increment `bundle_version`.
 
+**Revision 1.1 (2026-10):** adds the optional v2 fields in §7, which IRL
+engines emit from 1.3.0 on. They do not change any v1 construction, so
+`bundle_version` stays `1`; a bundle without them verifies exactly as before.
+A verifier MUST honour `merkle_algo` (§7.1): reading a v2 anchor with the
+§3.3 construction yields a false root failure.
+
 This document fully defines the IRL proof bundle format and its verification
 algorithm. A correct implementation of §4 against this document — in any
 language — is a complete verifier. No access to the IRL Engine codebase or
@@ -50,6 +56,9 @@ A bundle is a single JSON object, UTF-8 encoded.
 | `verification_status` | string | `PENDING` \| `MATCHED` \| `DIVERGENT` \| `EXPIRED` \| `SHADOW_HALTED` |
 | `valid_time` | RFC 3339 | When the market state the agent acted on was valid |
 | `txn_time` | RFC 3339 | When the engine sealed the snapshot |
+| `snapshot_version` | int, optional | Seal format: absent or `1` = §3.1, `2` = §7.3 |
+| `public_view` | object, optional | v2 only: the public field view the seal is recomputed from (§7.3) |
+| `audit_path` | array, optional | v2 only: Merkle audit path to the covering anchor's root (§7.2) |
 
 ### 2.2 Anchor
 
@@ -61,6 +70,7 @@ A bundle is a single JSON object, UTF-8 encoded.
 | `merkle_root` | string | Lower-hex 32-byte Merkle root (§3.3) |
 | `leaves` | array of string | All `reasoning_hash` values in the period, ordered by `txn_time` ascending |
 | `ots_receipt_base64` | string \| null | Raw OpenTimestamps receipt, base64 (§5) |
+| `merkle_algo` | string, optional | Root construction: absent = §3.3, `"rfc6962-sha256-v2"` = §7.1 |
 
 ## 3. Hash constructions
 
@@ -98,7 +108,8 @@ Binary SHA-256 Merkle tree:
 
 ## 4. Verification algorithm
 
-A verifier MUST perform all three checks. The bundle **fails** if any check
+A verifier MUST perform all three checks, plus the §7.4 checks whenever
+their fields are present. The bundle **fails** if any check
 in §4.1 or §4.2 fails, or if any inclusion check in §4.3 fails.
 
 ### 4.1 Binding
@@ -126,18 +137,35 @@ For every trace: find the anchor with
 
 ## 5. Bitcoin anchoring
 
-Each `ots_receipt_base64` decodes to a raw OpenTimestamps receipt for the
-32-byte `merkle_root`. Verify with the standard OpenTimestamps client
-(https://opentimestamps.org), which checks the commitment path down to a
-Bitcoin block header:
+Each `ots_receipt_base64` decodes to a serialized OpenTimestamps
+*timestamp* whose input message is the 32-byte `merkle_root` — the bytes a
+calendar returns, without the `.ots` file header. To use it with the
+standard client (https://opentimestamps.org), wrap it as a detached `.ots`
+file:
 
 ```
-ots verify anchor-0.ots
+header magic  00 4f 70 65 6e 54 69 6d 65 73 74 61 6d 70 73 00 00 50 72 6f 6f 66 00
+              bf 89 e2 e8 84 e8 92 94   ("\0OpenTimestamps\0\0Proof\0" + 8 bytes)
+version       01
+hash op       08                        (SHA-256)
+digest        merkle_root, 32 bytes
+timestamp     decoded ots_receipt_base64
 ```
 
-A receipt may initially be a calendar attestation; it upgrades to a
-Bitcoin-complete proof after 1–2 blocks. Receipts can also be re-obtained
-by submitting the root to any OTS calendar.
+`irl-verify --dump-ots <dir>` writes exactly this. Then:
+
+```
+ots upgrade anchor-0.ots                    # fetch the Bitcoin path from the calendar
+ots verify -d <merkle_root> anchor-0.ots    # needs a local Bitcoin node
+```
+
+Without a node, `ots info anchor-0.ots` names the attesting block height;
+the final commitment it prints must equal that block header's Merkle root
+on any block explorer.
+
+A receipt may initially carry only a calendar (pending) attestation;
+`ots upgrade` completes it once the calendar's transaction confirms. Receipts
+can also be re-obtained by submitting the root to any OTS calendar.
 
 ## 6. Threat model summary
 
@@ -148,3 +176,55 @@ by submitting the root to any OTS calendar.
 | Insert a back-dated trace | §4.2 / §4.3 (anchored root cannot change) + §5 (Bitcoin timestamp) |
 | Producer rewrites both traces and anchors | §5 — the Bitcoin-committed root cannot be reproduced for altered data |
 | Fabricate snapshot content *before* sealing | **Out of scope** — see §1. Mitigated operationally by pre-registration of model hashes and post-trade divergence detection |
+
+## 7. Revision 1.1 additions (optional fields)
+
+### 7.1 `merkle_algo = "rfc6962-sha256-v2"`
+
+The §3.3 tree uses one hash for leaves and internal nodes, so a set of
+internal nodes can pose as the leaves of a smaller tree with the same root
+(the CVE-2012-2459 class). v2 separates the two domains:
+
+```
+leaf(h)    = SHA-256(0x00 || leaf_bytes(h))      leaf_bytes as in §3.3 step 1
+node(l, r) = SHA-256(0x01 || l || r)
+```
+
+Leaves are taken in the order supplied; an odd level duplicates its last
+node; an empty leaf list yields 32 zero bytes. A single leaf's root is
+`leaf(h)`, not `h`. An anchor with any other `merkle_algo` value is a
+failure (unsupported construction).
+
+### 7.2 `audit_path`
+
+An array of steps `{ "sibling": <lower-hex 32 bytes>, "sibling_is_left": bool }`
+from the trace's leaf to the root. Fold from `acc = leaf(reasoning_hash)`:
+`acc = node(sibling, acc)` when `sibling_is_left`, else `node(acc, sibling)`.
+The result must equal the covering anchor's `merkle_root`. Paths are only
+checked against v2 anchors.
+
+### 7.3 `snapshot_version = 2` and `public_view`
+
+A v2 seal commits to a public field view instead of the whole snapshot:
+
+```
+reasoning_hash = hex(SHA-256(canonical JSON of the public view))
+```
+
+The view has exactly these fields: `trace_id` (string), `latent_fingerprint`
+(string), `direction` (string), `quantity` (float), `notional` (float),
+`asset` (string), `mta_hash` (string), `mta_regime_id` (int 0–255),
+`valid_time` (int, ms), `txn_time` (int, ms), `private_commitment`
+(lower-hex SHA-256 of the canonical private field group, which is not
+disclosed). Canonical JSON: keys sorted, no whitespace, strings JSON-escaped,
+floats in shortest round-trip form with a `.0` for integral values (`1.0`,
+`940.2`), integers as integers. Use exactly these eleven fields; ignore
+anything else in `public_view`.
+
+### 7.4 Additional checks
+
+- **Preimage.** For every trace with `snapshot_version >= 2`, recompute
+  §7.3 and compare with `reasoning_hash`. A mismatch, or a missing
+  `public_view`, is a failure.
+- **Audit path.** For every trace that carries an `audit_path` and falls in
+  a v2 anchor (per §4.3), fold §7.2. A mismatch is a failure.

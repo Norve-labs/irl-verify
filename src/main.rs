@@ -7,7 +7,7 @@
 
 use anyhow::{bail, Context, Result};
 use base64::Engine;
-use irl_verify::{verify_bundle, ProofBundle, VerificationReport};
+use irl_verify::{ots_file, verify_bundle, ProofBundle, VerificationReport};
 
 struct Args {
     bundle_path: String,
@@ -58,8 +58,10 @@ fn dump_ots_receipts(bundle: &ProofBundle, dir: &str) -> Result<usize> {
             let bytes = base64::engine::general_purpose::STANDARD
                 .decode(b64)
                 .with_context(|| format!("anchor {idx}: invalid base64 OTS receipt"))?;
+            let file = ots_file(&anchor.merkle_root, &bytes)
+                .with_context(|| format!("anchor {idx}: merkle_root is not 32-byte hex"))?;
             let path = format!("{dir}/anchor-{idx}.ots");
-            std::fs::write(&path, bytes).with_context(|| format!("failed to write {path}"))?;
+            std::fs::write(&path, file).with_context(|| format!("failed to write {path}"))?;
             println!(
                 "  wrote {path}  (root: {}  period: {} .. {})",
                 anchor.merkle_root, anchor.period_start, anchor.period_end
@@ -96,6 +98,18 @@ fn print_report(report: &VerificationReport, bundle: &ProofBundle) {
         report.inclusion_failures.len(),
         report.traces_unanchored.len()
     );
+    if report.preimage_checked > 0 || report.audit_paths_checked > 0 {
+        println!(
+            "  preimage (v2)  : {} recomputed, {} failed",
+            report.preimage_checked,
+            report.preimage_failures.len()
+        );
+        println!(
+            "  audit paths(v2): {} folded, {} failed",
+            report.audit_paths_checked,
+            report.audit_path_failures.len()
+        );
+    }
     println!(
         "  OTS receipts   : {}/{} anchors carry a receipt",
         report.anchors_with_ots_receipt, report.anchors_checked
@@ -106,6 +120,8 @@ fn print_report(report: &VerificationReport, bundle: &ProofBundle) {
         .iter()
         .chain(&report.anchor_root_failures)
         .chain(&report.inclusion_failures)
+        .chain(&report.preimage_failures)
+        .chain(&report.audit_path_failures)
     {
         println!("  FAIL: {failure}");
     }
@@ -124,7 +140,8 @@ fn print_report(report: &VerificationReport, bundle: &ProofBundle) {
         if report.anchors_with_ots_receipt > 0 {
             println!("Next: verify Bitcoin anchoring with the OpenTimestamps client:");
             println!("  irl-verify <bundle.json> --dump-ots ./ots");
-            println!("  ots verify ./ots/anchor-0.ots");
+            println!("  ots upgrade ./ots/anchor-0.ots");
+            println!("  ots verify -d <anchor-0 merkle_root> ./ots/anchor-0.ots");
         }
     } else {
         println!("FAIL — the bundle is inconsistent. See failures above.");

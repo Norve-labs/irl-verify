@@ -47,13 +47,21 @@ output names the exact trace or anchor that broke.
    anchor covering its sealing time. A trace silently edited, inserted, or
    deleted after anchoring cannot pass.
 
+Bundles from IRL engine 1.3+ also carry the v2 additions of
+[SPEC.md §7](SPEC.md#7-revision-11-additions-optional-fields), which this
+tool checks too: domain-separated Merkle roots (`merkle_algo =
+"rfc6962-sha256-v2"`), per-trace audit paths, and v2 seals recomputed from
+their public field view. irl-verify 1.0 read v2 anchors with the v1
+construction and reported false root failures; use 1.1 or later.
+
 The final step — proving each Merkle root existed before a specific Bitcoin
 block — uses the standard OpenTimestamps client against receipts embedded
 in the bundle:
 
 ```
 irl-verify bundle.json --dump-ots ./ots
-ots verify ./ots/anchor-0.ots
+ots upgrade ./ots/anchor-0.ots                    # fetch the Bitcoin path
+ots verify -d <merkle_root> ./ots/anchor-0.ots    # needs a local Bitcoin node
 ```
 
 ## What it proves (and what it doesn't)
@@ -84,7 +92,7 @@ cd irl-verify && cargo build --release
 ```
 irl-verify <bundle.json>                # verify, human-readable report
 irl-verify <bundle.json> --json        # machine-readable report
-irl-verify <bundle.json> --dump-ots d  # extract OTS receipts for `ots verify`
+irl-verify <bundle.json> --dump-ots d  # write each receipt as a standard .ots file
 ```
 
 ## The spec

@@ -4,7 +4,7 @@ version = "1.0.0"
 edition = "2021"
 license = "MIT"
 description = "Offline verifier for IRL (Immutable Reasoning Log) proof bundles. No network, no database, no trust in the operator."
-repository = "https://github.com/macropulse-lab/irl-verify"
+repository = "https://github.com/horkos-labs/irl-verify"
 keywords = ["audit", "merkle", "opentimestamps", "compliance", "verification"]
 categories = ["cryptography", "command-line-utilities"]
 

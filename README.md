@@ -68,13 +68,13 @@ history even with full control of their own database. See
 ## Install
 
 ```
-cargo install --git https://github.com/macropulse-lab/irl-verify
+cargo install --git https://github.com/horkos-labs/irl-verify
 ```
 
 or build from source:
 
 ```
-git clone https://github.com/macropulse-lab/irl-verify
+git clone https://github.com/horkos-labs/irl-verify
 cd irl-verify && cargo build --release
 ./target/release/irl-verify --help
 ```

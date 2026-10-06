@@ -1,6 +1,6 @@
 [package]
 name = "irl-verify"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 license = "MIT"
 description = "Offline verifier for IRL (Immutable Reasoning Log) proof bundles. No network, no database, no trust in the operator."

@@ -1,5 +1,5 @@
 <div align="center">
-<sub>IRL by <a href="https://github.com/horkos-labs">Horkos Labs</a></sub>
+<sub>IRL by <a href="https://github.com/norve-labs">Norve</a></sub>
 </div>
 
 # irl-verify
@@ -71,13 +71,13 @@ history even with full control of their own database. See
 ## Install
 
 ```
-cargo install --git https://github.com/horkos-labs/irl-verify
+cargo install --git https://github.com/norve-labs/irl-verify
 ```
 
 or build from source:
 
 ```
-git clone https://github.com/horkos-labs/irl-verify
+git clone https://github.com/norve-labs/irl-verify
 cd irl-verify && cargo build --release
 ./target/release/irl-verify --help
 ```
@@ -115,5 +115,5 @@ MIT — verification infrastructure should be free for everyone, forever.
 ---
 
 <div align="center">
-<sub>IRL by <a href="https://github.com/horkos-labs">Horkos Labs</a> · <a href="https://irl.macropulse.live">irl.macropulse.live</a></sub>
+<sub>IRL by <a href="https://github.com/norve-labs">Norve</a> · <a href="https://irl.macropulse.live">irl.macropulse.live</a></sub>
 </div>

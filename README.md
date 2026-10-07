@@ -106,7 +106,7 @@ GET /irl/attestation?from=<rfc3339>&to=<rfc3339>[&agent_id=<uuid>]
 
 A public anchor transparency feed (no auth) is available at
 `GET /irl/anchors` on any IRL instance, e.g.
-[irl.macropulse.live/irl/anchors](https://irl.macropulse.live/irl/anchors).
+[norve.dev/irl/anchors](https://norve.dev/irl/anchors).
 
 ## License
 
@@ -115,5 +115,5 @@ MIT — verification infrastructure should be free for everyone, forever.
 ---
 
 <div align="center">
-<sub>IRL by <a href="https://github.com/norve-labs">Norve</a> · <a href="https://irl.macropulse.live">irl.macropulse.live</a></sub>
+<sub>IRL by <a href="https://github.com/norve-labs">Norve</a> · <a href="https://norve.dev">norve.dev</a></sub>
 </div>
